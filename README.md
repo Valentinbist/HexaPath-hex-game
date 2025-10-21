@@ -1,6 +1,6 @@
 # HexaPath: A Modern Hex Game
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Valentinbist/generated-app-20251021-081645)
 
 HexaPath is a digital implementation of the classic abstract strategy board game, Hex, played on an 11x11 hexagonal grid. The game features a vibrant, playful, and modern user interface designed for a delightful user experience. Two players, Blue and Red, take turns placing their colored tiles on empty hexagons. The objective for the Blue player is to create an unbroken path of their tiles connecting the top and bottom edges of the board. The objective for the Red player is to connect the left and right edges.
 
@@ -85,7 +85,7 @@ This command will build the project and deploy it using the configuration in `wr
 
 Alternatively, you can deploy this project to Cloudflare with a single click.
 
-[cloudflarebutton]
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Valentinbist/generated-app-20251021-081645)
 
 ## Contributing
 
