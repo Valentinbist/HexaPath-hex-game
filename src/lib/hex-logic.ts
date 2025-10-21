@@ -58,6 +58,7 @@ export const checkWin = (board: Board, player: Player): Position[] | null => {
   while (queue.length > 0) {
     const path = queue.shift()!;
     const lastPos = path[path.length - 1];
+
     // Check for win condition
     if (player === Player.BLUE && lastPos.row === BOARD_SIZE - 1) {
       return path;

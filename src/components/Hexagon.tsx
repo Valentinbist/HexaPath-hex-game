@@ -10,10 +10,6 @@ interface HexagonProps {
   isWinning: boolean;
   isGameOver: boolean;
   onClick: (row: number, col: number) => void;
-  isTopBorder?: boolean;
-  isBottomBorder?: boolean;
-  isLeftBorder?: boolean;
-  isRightBorder?: boolean;
 }
 const HEX_WIDTH = 100;
 const HEX_HEIGHT = 86.6; // sqrt(3)/2 * 100
@@ -42,6 +38,46 @@ const edges = {
   bottom: `M ${HEX_WIDTH * 0.75} ${HEX_HEIGHT * 1} L ${HEX_WIDTH * 0.25} ${HEX_HEIGHT * 1}`,
   bottomLeft: `M ${HEX_WIDTH * 0.25} ${HEX_HEIGHT * 1} L ${HEX_WIDTH * 0} ${HEX_HEIGHT * 0.5}`,
 };
+type BorderPlayer = 'blue' | 'red';
+type BorderSegment = { edge: keyof typeof edges; player: BorderPlayer };
+const borderConfig: Array<{
+  edge: keyof typeof edges;
+  offset: [number, number];
+  getPlayer: (row: number, col: number) => BorderPlayer | null;
+}> = [
+  {
+    edge: 'top',
+    offset: [-1, 0],
+    getPlayer: () => 'blue',
+  },
+  {
+    edge: 'topRight',
+    offset: [-1, 1],
+    getPlayer: (row, col) =>
+      row === 0 ? 'blue' : col === BOARD_SIZE - 1 ? 'red' : null,
+  },
+  {
+    edge: 'bottomRight',
+    offset: [0, 1],
+    getPlayer: () => 'red',
+  },
+  {
+    edge: 'bottom',
+    offset: [1, 0],
+    getPlayer: () => 'blue',
+  },
+  {
+    edge: 'bottomLeft',
+    offset: [1, -1],
+    getPlayer: (row, col) =>
+      row === BOARD_SIZE - 1 ? 'blue' : col === 0 ? 'red' : null,
+  },
+  {
+    edge: 'topLeft',
+    offset: [0, -1],
+    getPlayer: () => 'red',
+  },
+];
 const BorderPath = ({ d, player }: { d: string; player: 'blue' | 'red' }) => (
   <path
     d={d}
@@ -59,10 +95,6 @@ export const Hexagon = React.memo(
     isWinning,
     isGameOver,
     onClick,
-    isTopBorder,
-    isBottomBorder,
-    isLeftBorder,
-    isRightBorder,
   }: HexagonProps) => {
     const handleClick = () => {
       if (player === Player.EMPTY && !isGameOver) {
@@ -70,6 +102,23 @@ export const Hexagon = React.memo(
       }
     };
     const isClickable = player === Player.EMPTY && !isGameOver;
+    const borderSegments = borderConfig.reduce<BorderSegment[]>((segments, { edge, offset, getPlayer }) => {
+      const [dr, dc] = offset;
+      const neighborRow = row + dr;
+      const neighborCol = col + dc;
+      if (
+        neighborRow < 0 ||
+        neighborRow >= BOARD_SIZE ||
+        neighborCol < 0 ||
+        neighborCol >= BOARD_SIZE
+      ) {
+        const borderPlayer = getPlayer(row, col);
+        if (borderPlayer) {
+          segments.push({ edge, player: borderPlayer });
+        }
+      }
+      return segments;
+    }, []);
     return (
       <motion.g
         initial={{ scale: 0.5, opacity: 0 }}
@@ -91,32 +140,9 @@ export const Hexagon = React.memo(
             isWinning && 'animate-win-pulse'
           )}
         />
-        {isTopBorder && (
-          <>
-            <BorderPath d={edges.top} player="blue" />
-            {col === 0 && <BorderPath d={edges.topLeft} player="blue" />}
-            {col === BOARD_SIZE - 1 && <BorderPath d={edges.topRight} player="blue" />}
-          </>
-        )}
-        {isBottomBorder && (
-          <>
-            <BorderPath d={edges.bottom} player="blue" />
-            {col === 0 && <BorderPath d={edges.bottomLeft} player="blue" />}
-            {col === BOARD_SIZE - 1 && <BorderPath d={edges.bottomRight} player="blue" />}
-          </>
-        )}
-        {isLeftBorder && (
-          <>
-            <BorderPath d={edges.topLeft} player="red" />
-            <BorderPath d={edges.bottomLeft} player="red" />
-          </>
-        )}
-        {isRightBorder && (
-          <>
-            <BorderPath d={edges.topRight} player="red" />
-            <BorderPath d={edges.bottomRight} player="red" />
-          </>
-        )}
+        {borderSegments.map(({ edge, player: borderPlayer }) => (
+          <BorderPath key={edge} d={edges[edge]} player={borderPlayer} />
+        ))}
       </motion.g>
     );
   }

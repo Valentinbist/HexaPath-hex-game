@@ -110,10 +110,6 @@ const GameBoard = () => {
                     isWinning={winningPathSet.has(`${r},${c}`)}
                     isGameOver={gameState === 'won'}
                     onClick={makeMove}
-                    isTopBorder={r === 0}
-                    isBottomBorder={r === BOARD_SIZE - 1}
-                    isLeftBorder={c === 0}
-                    isRightBorder={c === BOARD_SIZE - 1}
                   />
                 </g>
               );
