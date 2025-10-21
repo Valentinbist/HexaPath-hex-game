@@ -174,9 +174,6 @@ export function HomePage() {
           </Button>
         </motion.div>
       </div>
-      <footer className="absolute bottom-4 text-center text-sm text-gray-500 dark:text-gray-400">
-        Built with ❤�� at Cloudflare
-      </footer>
     </main>
   );
 }
