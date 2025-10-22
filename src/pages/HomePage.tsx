@@ -164,6 +164,8 @@ const GameBoard = () => {
 
 export function HomePage() {
   const [showModeSelector, setShowModeSelector] = useState(false);
+  const [debugData, setDebugData] = useState<string | null>(null);
+  const [debugNote, setDebugNote] = useState('');
   const gameState = useGameStore((s) => s.gameState);
   const gameMode = useGameStore((s) => s.gameMode);
   const winner = useGameStore((s) => s.winner);
@@ -202,7 +204,7 @@ export function HomePage() {
         });
       }
     }
-  }, []);
+  }, [joinOnlineGame, loadOnlineGame]);
 
   // Polling mechanism for online games
   useEffect(() => {
@@ -265,6 +267,45 @@ export function HomePage() {
     }
   };
 
+  const handleDumpGameState = async () => {
+    const state = useGameStore.getState();
+    const debugPayload = {
+      gameMode: state.gameMode,
+      gameState: state.gameState,
+      board: state.board,
+      currentPlayer: state.currentPlayer,
+      winner: state.winner,
+      winningPath: state.winningPath,
+      gameId: state.gameId,
+      playerId: state.playerId,
+      playerColor: state.playerColor,
+      isYourTurn: state.isYourTurn,
+      opponentJoined: state.opponentJoined,
+      shareLink: state.shareLink,
+    };
+    const formatted = JSON.stringify(debugPayload, null, 2);
+    console.group('Hex Debug State');
+    console.log(formatted);
+    console.groupEnd();
+    let note = 'State logged to console.';
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(formatted);
+        note = 'State copied to clipboard and logged to console.';
+      }
+    } catch (err) {
+      console.warn('Clipboard write failed:', err);
+      note = 'Clipboard write failed; state logged to console.';
+    }
+    setDebugData(formatted);
+    setDebugNote(note);
+  };
+
+  const handleClearDebug = () => {
+    setDebugData(null);
+    setDebugNote('');
+  };
+
   return (
     <main className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-5xl mx-auto flex flex-col items-center space-y-6 md:space-y-8">
@@ -300,14 +341,35 @@ export function HomePage() {
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, type: 'spring', delay: 0.2 }}
         >
-          <Button
-            onClick={handleNewGame}
-            size="lg"
-            className="font-semibold text-lg px-8 py-6 bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300 transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95 shadow-lg"
-          >
-            New Game
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              onClick={handleNewGame}
+              size="lg"
+              className="font-semibold text-lg px-8 py-6 bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300 transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95 shadow-lg"
+            >
+              New Game
+            </Button>
+            <Button
+              variant={debugData ? 'secondary' : 'outline'}
+              onClick={debugData ? handleClearDebug : handleDumpGameState}
+              className="px-6 py-6 font-semibold"
+            >
+              {debugData ? 'Hide Debug State' : 'Debug Game State'}
+            </Button>
+          </div>
         </motion.div>
+
+        {debugData && (
+          <div className="w-full max-w-3xl mx-auto bg-gray-900 text-gray-100 rounded-lg p-4 shadow-inner border border-gray-700">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-semibold">Current Game State</span>
+              {debugNote && <span className="text-xs text-gray-400">{debugNote}</span>}
+            </div>
+            <pre className="text-xs whitespace-pre-wrap break-words max-h-64 overflow-auto">
+              {debugData}
+            </pre>
+          </div>
+        )}
       </div>
 
       <GameModeSelector

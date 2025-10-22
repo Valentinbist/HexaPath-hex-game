@@ -16,11 +16,11 @@ const getNeighbors = (row: number, col: number): Position[] => {
   const neighbors: Position[] = [];
   const candidates = [
     { row: row - 1, col: col },     // Top
-    { row: row - 1, col: col + 1 }, // Top-Right
-    { row: row, col: col + 1 },     // Right
+    { row: row, col: col + 1 },     // Top-Right (rhombus orientation)
+    { row: row + 1, col: col + 1 }, // Right
     { row: row + 1, col: col },     // Bottom
-    { row: row + 1, col: col - 1 }, // Bottom-Left
-    { row: row, col: col - 1 },     // Left
+    { row: row, col: col - 1 },     // Bottom-Left
+    { row: row - 1, col: col - 1 }, // Left
   ];
   for (const pos of candidates) {
     if (
