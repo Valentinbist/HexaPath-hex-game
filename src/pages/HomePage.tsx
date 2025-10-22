@@ -1,26 +1,48 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useGameStore } from '@/hooks/useGameStore';
 import { Player, BOARD_SIZE } from '@/lib/hex-logic';
 import { Hexagon } from '@/components/Hexagon';
 import { Button } from '@/components/ui/button';
+import { GameModeSelector } from '@/components/GameModeSelector';
+import { ShareLink } from '@/components/ShareLink';
 import { cn } from '@/lib/utils';
 import { useShallow } from 'zustand/react/shallow';
+
 const GameStatus = () => {
   const gameState = useGameStore((s) => s.gameState);
+  const gameMode = useGameStore((s) => s.gameMode);
   const currentPlayer = useGameStore((s) => s.currentPlayer);
   const winner = useGameStore((s) => s.winner);
+  const playerColor = useGameStore((s) => s.playerColor);
+  const isYourTurn = useGameStore((s) => s.isYourTurn);
+  const opponentJoined = useGameStore((s) => s.opponentJoined);
+
   const playerText = currentPlayer === Player.BLUE ? 'Blue' : 'Red';
-  const playerColor =
+  const playerColorClass =
     currentPlayer === Player.BLUE ? 'text-player-blue' : 'text-player-red';
   const winnerText = winner === Player.BLUE ? 'Blue' : 'Red';
-  const winnerColor =
+  const winnerColorClass =
     winner === Player.BLUE ? 'text-player-blue' : 'text-player-red';
+
+  const yourColorText = playerColor === Player.BLUE ? 'Blue' : 'Red';
+  const yourColorClass = playerColor === Player.BLUE ? 'text-player-blue' : 'text-player-red';
+
   return (
     <div className="h-16 flex items-center justify-center">
       <AnimatePresence mode="wait">
-        {gameState === 'playing' ? (
+        {gameState === 'waiting' ? (
+          <motion.h2
+            key="waiting"
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            className="text-2xl md:text-3xl font-semibold"
+          >
+            Waiting for opponent...
+          </motion.h2>
+        ) : gameState === 'playing' ? (
           <motion.h2
             key="playing"
             initial={{ y: -20, opacity: 0 }}
@@ -28,8 +50,21 @@ const GameStatus = () => {
             exit={{ y: 20, opacity: 0 }}
             className="text-2xl md:text-3xl font-semibold"
           >
-            <span className={cn(playerColor, 'font-bold')}>{playerText}'s</span>{' '}
-            Turn
+            {gameMode === 'online' ? (
+              <>
+                <span className={cn(yourColorClass, 'font-bold')}>You are {yourColorText}</span>
+                {' • '}
+                {isYourTurn ? (
+                  <span className="text-green-600 dark:text-green-400">Your Turn</span>
+                ) : (
+                  <span className="text-gray-500">Opponent's Turn</span>
+                )}
+              </>
+            ) : (
+              <>
+                <span className={cn(playerColorClass, 'font-bold')}>{playerText}'s</span> Turn
+              </>
+            )}
           </motion.h2>
         ) : (
           <motion.h2
@@ -39,13 +74,14 @@ const GameStatus = () => {
             exit={{ y: 20, opacity: 0, scale: 0.8 }}
             className="text-4xl md:text-5xl font-bold"
           >
-            <span className={winnerColor}>{winnerText}</span> Wins!
+            <span className={winnerColorClass}>{winnerText}</span> Wins!
           </motion.h2>
         )}
       </AnimatePresence>
     </div>
   );
 };
+
 const GameBoard = () => {
   const { board, currentPlayer, gameState, winningPath, makeMove } = useGameStore(
     useShallow((s) => ({
@@ -56,13 +92,16 @@ const GameBoard = () => {
       makeMove: s.makeMove,
     }))
   );
+
   const winningPathSet = new Set(
     winningPath.map((p) => `${p.row},${p.col}`)
   );
+
   const hexSize = 36;
   const scale = hexSize / 50; // Hexagon component is 100x86.6
   const scaledHexWidth = 100 * scale;
   const scaledHexHeight = 86.6 * scale;
+
   // Calculate the precise bounding box for the rhombus layout
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   for (let r = 0; r < BOARD_SIZE; r++) {
@@ -76,6 +115,7 @@ const GameBoard = () => {
       maxY = Math.max(maxY, y);
     }
   }
+
   const boardContentWidth = maxX - minX + scaledHexWidth;
   const boardContentHeight = maxY - minY + scaledHexHeight;
   const padding = 20; // Padding for shadow and hover effects
@@ -83,6 +123,7 @@ const GameBoard = () => {
   const viewBoxY = minY - padding;
   const viewBoxWidth = boardContentWidth + padding * 2;
   const viewBoxHeight = boardContentHeight + padding * 2;
+
   return (
     <div className="relative w-full max-w-xl mx-auto">
       <svg
@@ -120,10 +161,63 @@ const GameBoard = () => {
     </div>
   );
 };
+
 export function HomePage() {
-  const resetGame = useGameStore((s) => s.resetGame);
+  const [showModeSelector, setShowModeSelector] = useState(false);
   const gameState = useGameStore((s) => s.gameState);
+  const gameMode = useGameStore((s) => s.gameMode);
   const winner = useGameStore((s) => s.winner);
+  const gameId = useGameStore((s) => s.gameId);
+  const shareLink = useGameStore((s) => s.shareLink);
+  const isYourTurn = useGameStore((s) => s.isYourTurn);
+  const opponentJoined = useGameStore((s) => s.opponentJoined);
+
+  const setLocalMode = useGameStore((s) => s.setLocalMode);
+  const createOnlineGame = useGameStore((s) => s.createOnlineGame);
+  const joinOnlineGame = useGameStore((s) => s.joinOnlineGame);
+  const loadOnlineGame = useGameStore((s) => s.loadOnlineGame);
+  const syncOnlineGame = useGameStore((s) => s.syncOnlineGame);
+  const resetGame = useGameStore((s) => s.resetGame);
+
+  // Handle URL parameter for joining games
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const urlGameId = params.get('game');
+
+    if (urlGameId) {
+      const storedPlayerId = localStorage.getItem(`game:${urlGameId}:playerId`);
+
+      if (storedPlayerId) {
+        // Rejoin existing game
+        loadOnlineGame(urlGameId, storedPlayerId).catch((err) => {
+          console.error('Failed to load game:', err);
+          // Clear invalid stored data
+          localStorage.removeItem(`game:${urlGameId}:playerId`);
+        });
+      } else {
+        // Join new game
+        joinOnlineGame(urlGameId).catch((err) => {
+          console.error('Failed to join game:', err);
+          alert('Failed to join game. The game may be full or not exist.');
+        });
+      }
+    }
+  }, []);
+
+  // Polling mechanism for online games
+  useEffect(() => {
+    if (gameMode !== 'online') return;
+    if (gameState === 'won') return;
+    if (isYourTurn && gameState !== 'waiting') return;
+
+    const interval = setInterval(() => {
+      syncOnlineGame();
+    }, 2500); // Poll every 2.5 seconds
+
+    return () => clearInterval(interval);
+  }, [gameMode, gameState, isYourTurn, syncOnlineGame]);
+
+  // Confetti on win
   useEffect(() => {
     if (gameState === 'won') {
       const colors =
@@ -138,6 +232,39 @@ export function HomePage() {
       });
     }
   }, [gameState, winner]);
+
+  const handleNewGame = () => {
+    setShowModeSelector(true);
+  };
+
+  const handleLocalGame = () => {
+    setLocalMode();
+    // Clear URL param if present
+    window.history.replaceState({}, '', window.location.pathname);
+  };
+
+  const handleCreateOnline = async () => {
+    try {
+      const { gameId, shareLink } = await createOnlineGame();
+      // Update URL with game ID
+      window.history.replaceState({}, '', `?game=${gameId}`);
+    } catch (err) {
+      console.error('Failed to create game:', err);
+      alert('Failed to create online game. Please try again.');
+    }
+  };
+
+  const handleJoinOnline = async (gameId: string) => {
+    try {
+      await joinOnlineGame(gameId);
+      // Update URL with game ID
+      window.history.replaceState({}, '', `?game=${gameId}`);
+    } catch (err) {
+      console.error('Failed to join game:', err);
+      alert('Failed to join game. The game may be full or not exist.');
+    }
+  };
+
   return (
     <main className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-5xl mx-auto flex flex-col items-center space-y-6 md:space-y-8">
@@ -154,15 +281,27 @@ export function HomePage() {
             Connect your sides to win!
           </p>
         </motion.header>
+
         <GameStatus />
         <GameBoard />
+
+        {gameMode === 'online' && gameState === 'waiting' && gameId && shareLink && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5, type: 'spring' }}
+          >
+            <ShareLink gameId={gameId} shareLink={shareLink} />
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ y: 50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.5, type: 'spring', delay: 0.2 }}
         >
           <Button
-            onClick={resetGame}
+            onClick={handleNewGame}
             size="lg"
             className="font-semibold text-lg px-8 py-6 bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300 transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95 shadow-lg"
           >
@@ -170,6 +309,14 @@ export function HomePage() {
           </Button>
         </motion.div>
       </div>
+
+      <GameModeSelector
+        open={showModeSelector}
+        onClose={() => setShowModeSelector(false)}
+        onLocalGame={handleLocalGame}
+        onCreateOnline={handleCreateOnline}
+        onJoinOnline={handleJoinOnline}
+      />
     </main>
   );
 }

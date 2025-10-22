@@ -11,6 +11,12 @@
 		"not_found_handling": "single-page-application",
 		"run_worker_first": ["/api/*", "!/api/docs/*"]
 	},
+	"kv_namespaces": [
+		{
+			"binding": "GAMES_KV",
+			"id": "b154c0ad6c6642b099bdc0c1d9138824"
+		}
+	],
 	"observability": {
 		"enabled": true
 	}
