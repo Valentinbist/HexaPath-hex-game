@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useGameStore } from '@/hooks/useGameStore';
@@ -166,6 +166,7 @@ export function HomePage() {
   const [showModeSelector, setShowModeSelector] = useState(false);
   const [debugData, setDebugData] = useState<string | null>(null);
   const [debugNote, setDebugNote] = useState('');
+  const hasJoinedRef = useRef(false);
   const gameState = useGameStore((s) => s.gameState);
   const gameMode = useGameStore((s) => s.gameMode);
   const winner = useGameStore((s) => s.winner);
@@ -186,7 +187,8 @@ export function HomePage() {
     const params = new URLSearchParams(window.location.search);
     const urlGameId = params.get('game');
 
-    if (urlGameId) {
+    if (urlGameId && !hasJoinedRef.current) {
+      hasJoinedRef.current = true;
       const storedPlayerId = localStorage.getItem(`game:${urlGameId}:playerId`);
 
       if (storedPlayerId) {
@@ -195,12 +197,17 @@ export function HomePage() {
           console.error('Failed to load game:', err);
           // Clear invalid stored data
           localStorage.removeItem(`game:${urlGameId}:playerId`);
+          hasJoinedRef.current = false;
         });
       } else {
         // Join new game
         joinOnlineGame(urlGameId).catch((err) => {
           console.error('Failed to join game:', err);
-          alert('Failed to join game. The game may be full or not exist.');
+          // Only show alert if it's not a "game full" error
+          if (!err.message?.includes('already has 2 players')) {
+            alert('Failed to join game. The game may be full or not exist.');
+          }
+          hasJoinedRef.current = false;
         });
       }
     }
