@@ -40,44 +40,6 @@ const edges = {
 };
 type BorderPlayer = 'blue' | 'red';
 type BorderSegment = { edge: keyof typeof edges; player: BorderPlayer };
-const borderConfig: Array<{
-  edge: keyof typeof edges;
-  offset: [number, number];
-  getPlayer: (row: number, col: number) => BorderPlayer | null;
-}> = [
-  {
-    edge: 'top',
-    offset: [-1, 0],
-    getPlayer: () => 'blue',
-  },
-  {
-    edge: 'topRight',
-    offset: [-1, 1],
-    getPlayer: (row, col) =>
-      row === 0 ? 'blue' : col === BOARD_SIZE - 1 ? 'red' : null,
-  },
-  {
-    edge: 'bottomRight',
-    offset: [0, 1],
-    getPlayer: () => 'red',
-  },
-  {
-    edge: 'bottom',
-    offset: [1, 0],
-    getPlayer: () => 'blue',
-  },
-  {
-    edge: 'bottomLeft',
-    offset: [1, -1],
-    getPlayer: (row, col) =>
-      row === BOARD_SIZE - 1 ? 'blue' : col === 0 ? 'red' : null,
-  },
-  {
-    edge: 'topLeft',
-    offset: [0, -1],
-    getPlayer: () => 'red',
-  },
-];
 const BorderPath = ({ d, player }: { d: string; player: 'blue' | 'red' }) => (
   <path
     d={d}
@@ -102,23 +64,39 @@ export const Hexagon = React.memo(
       }
     };
     const isClickable = player === Player.EMPTY && !isGameOver;
-    const borderSegments = borderConfig.reduce<BorderSegment[]>((segments, { edge, offset, getPlayer }) => {
-      const [dr, dc] = offset;
-      const neighborRow = row + dr;
-      const neighborCol = col + dc;
-      if (
-        neighborRow < 0 ||
-        neighborRow >= BOARD_SIZE ||
-        neighborCol < 0 ||
-        neighborCol >= BOARD_SIZE
-      ) {
-        const borderPlayer = getPlayer(row, col);
-        if (borderPlayer) {
-          segments.push({ edge, player: borderPlayer });
-        }
+    const borderSegments: BorderSegment[] = [];
+    const segmentSet = new Set<string>();
+    const addSegment = (edge: keyof typeof edges, player: BorderPlayer) => {
+      const key = `${edge}-${player}`;
+      if (!segmentSet.has(key)) {
+        segmentSet.add(key);
+        borderSegments.push({ edge, player });
       }
-      return segments;
-    }, []);
+    };
+    const isTopRow = row === 0;
+    const isBottomRow = row === BOARD_SIZE - 1;
+    const isLeftCol = col === 0;
+    const isRightCol = col === BOARD_SIZE - 1;
+    if (isTopRow) {
+      addSegment('top', isLeftCol ? 'red' : 'blue');
+      addSegment('topRight', 'blue');
+    }
+    if (isRightCol) {
+      addSegment('bottomRight', 'red');
+      if (!isBottomRow) {
+        addSegment('bottom', 'red');
+      }
+    }
+    if (isBottomRow) {
+      addSegment('bottom', isRightCol ? 'red' : 'blue');
+      addSegment('bottomLeft', 'blue');
+    }
+    if (isLeftCol) {
+      addSegment('topLeft', 'red');
+      if (!isTopRow) {
+        addSegment('top', 'red');
+      }
+    }
     return (
       <motion.g
         initial={{ scale: 0.5, opacity: 0 }}
