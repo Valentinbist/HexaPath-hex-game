@@ -34,24 +34,78 @@ const getNeighbors = (row: number, col: number): Position[] => {
   }
   return neighbors;
 };
+type Edge = 'topLeft' | 'top' | 'topRight' | 'bottomRight' | 'bottom' | 'bottomLeft';
+type BorderPlayer = 'blue' | 'red';
+// Mirrors the rim rendering so win detection uses the same edge ownership.
+const edgeOwnersForCell = (row: number, col: number): Partial<Record<Edge, BorderPlayer>> => {
+  const owners: Partial<Record<Edge, BorderPlayer>> = {};
+  const isTopRow = row === 0;
+  const isBottomRow = row === BOARD_SIZE - 1;
+  const isLeftCol = col === 0;
+  const isRightCol = col === BOARD_SIZE - 1;
+  if (isTopRow) {
+    owners.top = isLeftCol ? 'red' : 'blue';
+    owners.topRight = 'blue';
+  }
+  if (isRightCol) {
+    owners.bottomRight = 'red';
+    if (!isBottomRow) {
+      owners.bottom = 'red';
+    }
+  }
+  if (isBottomRow) {
+    owners.bottom = isRightCol ? 'red' : 'blue';
+    owners.bottomLeft = 'blue';
+  }
+  if (isLeftCol) {
+    owners.topLeft = 'red';
+    if (!isTopRow) {
+      owners.top = 'red';
+    }
+  }
+  return owners;
+};
+const playerEdgeConfig: Record<Player.BLUE | Player.RED, {
+  color: BorderPlayer;
+  startEdges: Edge[];
+  goalEdges: Edge[];
+}> = {
+  [Player.BLUE]: {
+    color: 'blue',
+    startEdges: ['top', 'topRight'],
+    goalEdges: ['bottom', 'bottomLeft'],
+  },
+  [Player.RED]: {
+    color: 'red',
+    startEdges: ['top', 'topLeft'],
+    goalEdges: ['bottom', 'bottomRight'],
+  },
+};
+const touchesPlayerEdges = (
+  row: number,
+  col: number,
+  edges: Edge[],
+  color: BorderPlayer
+) => {
+  const owners = edgeOwnersForCell(row, col);
+  return edges.some((edge) => owners[edge] === color);
+};
 export const checkWin = (board: Board, player: Player): Position[] | null => {
+  if (player === Player.EMPTY) {
+    return null;
+  }
   const visited = new Set<string>();
   const queue: Position[][] = [];
-  // Initialize queue with starting positions for the player
-  if (player === Player.BLUE) {
+  const { color, startEdges, goalEdges } = playerEdgeConfig[player as Player.BLUE | Player.RED];
+  for (let r = 0; r < BOARD_SIZE; r++) {
     for (let c = 0; c < BOARD_SIZE; c++) {
-      if (board[0][c] === player) {
-        const path = [{ row: 0, col: c }];
-        queue.push(path);
-        visited.add(`0,${c}`);
-      }
-    }
-  } else { // Player.RED
-    for (let r = 0; r < BOARD_SIZE; r++) {
-      if (board[r][0] === player) {
-        const path = [{ row: r, col: 0 }];
-        queue.push(path);
-        visited.add(`${r},0`);
+      if (
+        board[r][c] === player &&
+        touchesPlayerEdges(r, c, startEdges, color)
+      ) {
+        const key = `${r},${c}`;
+        visited.add(key);
+        queue.push([{ row: r, col: c }]);
       }
     }
   }
@@ -60,10 +114,7 @@ export const checkWin = (board: Board, player: Player): Position[] | null => {
     const lastPos = path[path.length - 1];
 
     // Check for win condition
-    if (player === Player.BLUE && lastPos.row === BOARD_SIZE - 1) {
-      return path;
-    }
-    if (player === Player.RED && lastPos.col === BOARD_SIZE - 1) {
+    if (touchesPlayerEdges(lastPos.row, lastPos.col, goalEdges, color)) {
       return path;
     }
     const neighbors = getNeighbors(lastPos.row, lastPos.col);
