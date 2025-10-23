@@ -1,5 +1,9 @@
 # HexaPath: A Modern Hex Game
 
+[Play a Demo](https://hex.pixelchaos.blog/)
+
+![HexaPath Screenshot](./assets/hex.png)
+
 A digital implementation of the classic abstract strategy board game Hex, built with React and deployed on Cloudflare. Play on an 11x11 hexagonal grid with vibrant animations and smooth gameplay.
 
 Each player needs to connect their correspondingly colour side to win.
