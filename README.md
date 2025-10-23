@@ -44,8 +44,8 @@ Follow these instructions to get a copy of the project up and running on your lo
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/valentinbist/hexapath.git
-    cd hexapath
+    git clone https://github.com/valentinbist/HexaPath-hex-game.git
+    cd HexaPath-hex-game
     ```
 
 2.  **Install dependencies:**

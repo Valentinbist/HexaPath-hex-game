@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b91c1c;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Background hexagon -->
+  <polygon points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5"
+           fill="#1e293b" stroke="#334155" stroke-width="2"/>
+
+  <!-- Blue hexagon (top-left) -->
+  <polygon points="30,30 40,24 50,30 50,42 40,48 30,42"
+           fill="url(#blueGrad)" opacity="0.9"/>
+
+  <!-- Red hexagon (bottom-right) -->
+  <polygon points="50,58 60,52 70,58 70,70 60,76 50,70"
+           fill="url(#redGrad)" opacity="0.9"/>
+
+  <!-- Path lines suggesting connection -->
+  <path d="M 40,36 L 50,50 L 60,64"
+        stroke="#94a3b8" stroke-width="2" stroke-linecap="round"
+        fill="none" opacity="0.6"/>
+</svg>
