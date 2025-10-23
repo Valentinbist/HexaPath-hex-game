@@ -1,20 +1,27 @@
 /**
- * Wrangler config for the Cloudflare Durable Object template
- * STRICTLY DO NOT MODIFY THIS FILE - Hidden from AI to prevent breaking core functionality
+ * Wrangler configuration for HexaPath
+ *
+ * Setup instructions for deployment:
+ * 1. Create a KV namespace: wrangler kv namespace create GAMES_KV
+ * 2. Copy the ID from the output and replace YOUR_KV_NAMESPACE_ID_HERE below
+ * 3. Update the "name" field with your desired worker name
+ * 4. (Optional) Add custom routes for your domain
+ * 5. Run: bun run deploy
  */
- {
+{
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "v1-hexapath-95a15a8b-efce-43b1-98ab-cb450743a7a8",
+	"name": "hexapath",
 	"main": "worker/index.ts",
 	"compatibility_date": "2025-04-24",
 	"assets": {
+		"directory": "dist",
 		"not_found_handling": "single-page-application",
 		"run_worker_first": ["/api/*", "!/api/docs/*"]
 	},
 	"kv_namespaces": [
 		{
 			"binding": "GAMES_KV",
-			"id": "b154c0ad6c6642b099bdc0c1d9138824"
+			"id": "YOUR_KV_NAMESPACE_ID_HERE"
 		}
 	],
 	"observability": {
