@@ -27,7 +27,7 @@ dist-ssr
 .wrangler
 .dev.vars*
 .env.*
-wrangler.jsonc.local
+wrangler.jsonc
 
 data/
 .data/

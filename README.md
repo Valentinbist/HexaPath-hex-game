@@ -80,13 +80,18 @@ This project is configured for seamless deployment to the Cloudflare network.
 
 1. **Install Wrangler**: Follow the [Wrangler installation guide](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
 
-2. **Create a KV Namespace**:
+2. **Configure Wrangler**:
+   ```sh
+   cp wrangler.jsonc.example wrangler.jsonc
+   ```
+
+3. **Create a KV Namespace**:
    ```sh
    wrangler kv namespace create GAMES_KV
    ```
    Copy the namespace ID from the output
 
-3. **Update Configuration**:
+4. **Update Configuration**:
    - Open `wrangler.jsonc`
    - Replace `YOUR_KV_NAMESPACE_ID_HERE` with your KV namespace ID
    - Update the `name` field if desired (default: "hexapath")

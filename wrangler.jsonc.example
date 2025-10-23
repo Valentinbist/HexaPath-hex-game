@@ -1,0 +1,31 @@
+/**
+ * Wrangler configuration for HexaPath (TEMPLATE)
+ *
+ * Setup instructions:
+ * 1. Copy this file to wrangler.jsonc: cp wrangler.jsonc.example wrangler.jsonc
+ * 2. Create a KV namespace: wrangler kv namespace create GAMES_KV
+ * 3. Copy the ID from the output and replace YOUR_KV_NAMESPACE_ID_HERE below
+ * 4. Update the "name" field with your desired worker name (default: "hexapath")
+ * 5. (Optional) Add custom routes for your domain
+ * 6. Run: bun run deploy
+ */
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "hexapath",
+	"main": "worker/index.ts",
+	"compatibility_date": "2025-04-24",
+	"assets": {
+		"directory": "dist",
+		"not_found_handling": "single-page-application",
+		"run_worker_first": ["/api/*", "!/api/docs/*"]
+	},
+	"kv_namespaces": [
+		{
+			"binding": "GAMES_KV",
+			"id": "YOUR_KV_NAMESPACE_ID_HERE"
+		}
+	],
+	"observability": {
+		"enabled": true
+	}
+}
