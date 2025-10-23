@@ -1,10 +1,10 @@
 # HexaPath: A Modern Hex Game
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Valentinbist/generated-app-20251021-081645)
+A digital implementation of the classic abstract strategy board game Hex, built with React and deployed on Cloudflare. Play on an 11x11 hexagonal grid with vibrant animations and smooth gameplay.
 
-HexaPath is a digital implementation of the classic abstract strategy board game, Hex, played on an 11x11 hexagonal grid. The game features a vibrant, playful, and modern user interface designed for a delightful user experience. Two players, Blue and Red, take turns placing their colored tiles on empty hexagons. The objective for the Blue player is to create an unbroken path of their tiles connecting the top and bottom edges of the board. The objective for the Red player is to connect the left and right edges.
+Each player needs to connect their correspondingly colour side to win.
 
-The application is a single-page, client-side rendered game with all logic handled in the browser. It features smooth animations for tile placement, clear visual feedback for game state, and a celebratory animation upon a player's victory.
+> This project is an experiment with 100% AI development.
 
 ## Key Features
 
@@ -15,6 +15,7 @@ The application is a single-page, client-side rendered game with all logic handl
 -   **Clear State Indication**: Easily see whose turn it is and who the winner is.
 -   **Win Celebration**: The winning path is highlighted with a pulsing glow, followed by a confetti explosion.
 -   **Responsive Design**: Flawless gameplay experience across all device sizes.
+-   **Online Multiplayer**: Real-time gameplay via polling (cost-effective for Cloudflare's KV storage)
 
 ## Technology Stack
 
@@ -33,13 +34,13 @@ Follow these instructions to get a copy of the project up and running on your lo
 ### Prerequisites
 
 -   [Node.js](https://nodejs.org/) (v18 or later)
--   [Bun](https://bun.sh/) package manager
+-   [Bun](https://bun.sh/) package manager (tip: use [asdf](https://asdf-vm.com/) for easy version management)
 
 ### Installation
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/your-username/hexapath.git
+    git clone https://github.com/valentinbist/hexapath.git
     cd hexapath
     ```
 
@@ -71,32 +72,37 @@ The application will be available at `http://localhost:3000` (or another port if
 
 This project is configured for seamless deployment to the Cloudflare network.
 
+### Setup Instructions
+
+1. **Install Wrangler**: Follow the [Wrangler installation guide](https://developers.cloudflare.com/workers/wrangler/install-and-update/)
+
+2. **Create a KV Namespace**:
+   ```sh
+   wrangler kv namespace create GAMES_KV
+   ```
+   Copy the namespace ID from the output
+
+3. **Update Configuration**:
+   - Open `wrangler.jsonc`
+   - Replace `YOUR_KV_NAMESPACE_ID_HERE` with your KV namespace ID
+   - Update the `name` field if desired (default: "hexapath")
+
 ### Deploy via Wrangler CLI
 
-Ensure you have [Wrangler](https://developers.cloudflare.com/workers/wrangler/install-and-update/) installed and configured. Then, run the deployment script:
+Once configured, deploy with:
 
 ```sh
 bun run deploy
 ```
 
-This command will build the project and deploy it using the configuration in `wrangler.toml`.
-
-### Deploy with the Deploy Button
-
-Alternatively, you can deploy this project to Cloudflare with a single click.
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Valentinbist/generated-app-20251021-081645)
+This command will build the project and deploy it using the configuration in `wrangler.jsonc`.
 
 ## Contributing
 
-Contributions are welcome! Please feel free to open an issue or submit a pull request.
+This is a fun side project! Contributions, issues, and feature requests are welcome.
 
-1.  Fork the Project
-2.  Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3.  Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4.  Push to the Branch (`git push origin feature/AmazingFeature`)
-5.  Open a Pull Request
+Feel free to fork, experiment, and submit PRs.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the MIT License.
