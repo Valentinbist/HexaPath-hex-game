@@ -204,7 +204,13 @@ export function HomePage() {
 
         joinOnlineGame(urlGameId).catch((joinErr) => {
           console.error('Failed to join game:', joinErr);
-          if (!joinErr.message?.includes('already has 2 players')) {
+          const joinMessage =
+            joinErr instanceof Error ? joinErr.message.toLowerCase() : '';
+          if (joinMessage.includes('already has 2 players')) {
+            alert('This game already has two players and is currently in progress.');
+          } else if (joinMessage.includes('game not found')) {
+            alert('This game link is invalid or the game no longer exists.');
+          } else {
             alert('Failed to join game. The game may be full or not exist.');
           }
           hasJoinedRef.current = false;
