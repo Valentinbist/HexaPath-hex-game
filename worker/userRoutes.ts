@@ -12,6 +12,30 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     // Add more routes like this. **DO NOT MODIFY CORS OR OVERRIDE ERROR HANDLERS**
     app.get('/api/test', (c) => c.json({ success: true, data: { name: 'this works' }}));
 
+    // WebSocket upgrade -- connects to the per-game Durable Object
+    app.get('/api/games/:id/ws', async (c) => {
+        const upgradeHeader = c.req.header('Upgrade');
+        if (!upgradeHeader || upgradeHeader !== 'websocket') {
+            return c.text('Expected Upgrade: websocket', 426);
+        }
+
+        const gameId = c.req.param('id');
+        const playerId = c.req.query('playerId');
+        if (!playerId) {
+            return c.text('playerId query param required', 400);
+        }
+
+        const doId = c.env.GAME_ROOMS.idFromName(gameId);
+        const stub = c.env.GAME_ROOMS.get(doId);
+
+        const url = new URL(c.req.url);
+        url.searchParams.set('gameId', gameId);
+
+        return stub.fetch(new Request(url.toString(), {
+            headers: c.req.raw.headers,
+        }));
+    });
+
     // Create new online game
     app.post('/api/games/create', async (c) => {
         const gameId = generateGameId();

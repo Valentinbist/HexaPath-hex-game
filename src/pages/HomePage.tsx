@@ -179,7 +179,7 @@ export function HomePage() {
   const createOnlineGame = useGameStore((s) => s.createOnlineGame);
   const joinOnlineGame = useGameStore((s) => s.joinOnlineGame);
   const loadOnlineGame = useGameStore((s) => s.loadOnlineGame);
-  const syncOnlineGame = useGameStore((s) => s.syncOnlineGame);
+  const disconnectWebSocket = useGameStore((s) => s.disconnectWebSocket);
   const resetGame = useGameStore((s) => s.resetGame);
 
   // Handle URL parameter for joining games
@@ -213,18 +213,10 @@ export function HomePage() {
     }
   }, [joinOnlineGame, loadOnlineGame]);
 
-  // Polling mechanism for online games
+  // Clean up WebSocket on unmount
   useEffect(() => {
-    if (gameMode !== 'online') return;
-    if (gameState === 'won') return;
-    if (isYourTurn && gameState !== 'waiting') return;
-
-    const interval = setInterval(() => {
-      syncOnlineGame();
-    }, 2500); // Poll every 2.5 seconds
-
-    return () => clearInterval(interval);
-  }, [gameMode, gameState, isYourTurn, syncOnlineGame]);
+    return () => disconnectWebSocket();
+  }, [disconnectWebSocket]);
 
   // Confetti on win
   useEffect(() => {

@@ -6,4 +6,5 @@
 export interface Env {
     ASSETS: Fetcher;
     GAMES_KV: KVNamespace;
+    GAME_ROOMS: DurableObjectNamespace;
 }
