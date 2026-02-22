@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
+    <meta name="theme-color" content="#1d4ed8" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="HexaPath" />
+    <link rel="apple-touch-icon" href="/logo.svg" />
     <title>HexaPath - Classic Hex Strategy Game</title>
     <meta name="description" content="Play the classic Hex strategy game online. Connect your edges before your opponent in this modern implementation with beautiful animations." />
   </head>
@@ -26,6 +32,7 @@
           }
         }, true);
     </script>
+    <script src="/sw-register.js" defer></script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

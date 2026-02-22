@@ -1,29 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <defs>
-    <linearGradient id="blueGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#1d4ed8;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#ef4444;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#b91c1c;stop-opacity:1" />
-    </linearGradient>
-  </defs>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HexaPath logo">
+  <rect width="512" height="512" rx="96" fill="#0f172a" />
 
-  <!-- Background hexagon -->
-  <polygon points="50,5 90,27.5 90,72.5 50,95 10,72.5 10,27.5"
-           fill="#1e293b" stroke="#334155" stroke-width="2"/>
+  <g transform="translate(88 160)">
+    <!-- Blue edges (top + bottom of rhombus) -->
+    <line x1="-8" y1="-40" x2="232" y2="-40" stroke="#60a5fa" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+    <line x1="104" y1="232" x2="344" y2="232" stroke="#60a5fa" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+    <!-- Red edges (left + right of rhombus) -->
+    <line x1="-34" y1="-22" x2="78" y2="214" stroke="#f87171" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+    <line x1="258" y1="-22" x2="370" y2="214" stroke="#f87171" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
 
-  <!-- Blue hexagon (top-left) -->
-  <polygon points="30,30 40,24 50,30 50,42 40,48 30,42"
-           fill="url(#blueGrad)" opacity="0.9"/>
+    <!-- Row 0 -->
+    <polygon points="0,-32 28,-16 28,16 0,32 -28,16 -28,-16" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="56,-32 84,-16 84,16 56,32 28,16 28,-16" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="112,-32 140,-16 140,16 112,32 84,16 84,-16" fill="#3b82f6" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="168,-32 196,-16 196,16 168,32 140,16 140,-16" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="224,-32 252,-16 252,16 224,32 196,16 196,-16" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
 
-  <!-- Red hexagon (bottom-right) -->
-  <polygon points="50,58 60,52 70,58 70,70 60,76 50,70"
-           fill="url(#redGrad)" opacity="0.9"/>
+    <!-- Row 1 -->
+    <polygon points="28,16 56,32 56,64 28,80 0,64 0,32" fill="#ef4444" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="84,16 112,32 112,64 84,80 56,64 56,32" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="140,16 168,32 168,64 140,80 112,64 112,32" fill="#3b82f6" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="196,16 224,32 224,64 196,80 168,64 168,32" fill="#ef4444" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="252,16 280,32 280,64 252,80 224,64 224,32" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
 
-  <!-- Path lines suggesting connection -->
-  <path d="M 40,36 L 50,50 L 60,64"
-        stroke="#94a3b8" stroke-width="2" stroke-linecap="round"
-        fill="none" opacity="0.6"/>
+    <!-- Row 2 -->
+    <polygon points="56,64 84,80 84,112 56,128 28,112 28,80" fill="#ef4444" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="112,64 140,80 140,112 112,128 84,112 84,80" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="168,64 196,80 196,112 168,128 140,112 140,80" fill="#3b82f6" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="224,64 252,80 252,112 224,128 196,112 196,80" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="280,64 308,80 308,112 280,128 252,112 252,80" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+
+    <!-- Row 3 -->
+    <polygon points="84,112 112,128 112,160 84,176 56,160 56,128" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="140,112 168,128 168,160 140,176 112,160 112,128" fill="#3b82f6" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="196,112 224,128 224,160 196,176 168,160 168,128" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="252,112 280,128 280,160 252,176 224,160 224,128" fill="#ef4444" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="308,112 336,128 336,160 308,176 280,160 280,128" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+
+    <!-- Row 4 -->
+    <polygon points="112,160 140,176 140,208 112,224 84,208 84,176" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="168,160 196,176 196,208 168,224 140,208 140,176" fill="#3b82f6" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="224,160 252,176 252,208 224,224 196,208 196,176" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="280,160 308,176 308,208 280,224 252,208 252,176" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+    <polygon points="336,160 364,176 364,208 336,224 308,208 308,176" fill="#1e293b" stroke="#0f172a" stroke-width="4"/>
+  </g>
 </svg>
