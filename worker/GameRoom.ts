@@ -81,12 +81,18 @@ export class GameRoom extends DurableObject<Env> {
 
     this.broadcast({ type: 'opponent_connected' }, server);
 
-    server.send(JSON.stringify({
-      type: 'state',
-      gameState: game,
-      yourColor,
-      isYourTurn: game.currentPlayer === yourColor,
-    } satisfies ServerMessage));
+    if (game.player2Id) {
+      // When both players are present, broadcast authoritative state so an already-connected
+      // host can transition from "waiting" to "playing" immediately on opponent join.
+      this.broadcastState(game);
+    } else {
+      server.send(JSON.stringify({
+        type: 'state',
+        gameState: game,
+        yourColor,
+        isYourTurn: game.currentPlayer === yourColor,
+      } satisfies ServerMessage));
+    }
 
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -172,15 +178,7 @@ export class GameRoom extends DurableObject<Env> {
       { expirationTtl: 604800 },
     );
 
-    this.sessions.forEach((attachment, connectedWs) => {
-      const msg: ServerMessage = {
-        type: 'state',
-        gameState: game,
-        yourColor: attachment.playerColor,
-        isYourTurn: game.currentPlayer === attachment.playerColor,
-      };
-      connectedWs.send(JSON.stringify(msg));
-    });
+    this.broadcastState(game);
   }
 
   private getGameId(): string | null {
@@ -196,6 +194,18 @@ export class GameRoom extends DurableObject<Env> {
 
   private sendError(ws: WebSocket, message: string) {
     ws.send(JSON.stringify({ type: 'error', message } satisfies ServerMessage));
+  }
+
+  private broadcastState(game: OnlineGameState) {
+    this.sessions.forEach((attachment, connectedWs) => {
+      const msg: ServerMessage = {
+        type: 'state',
+        gameState: game,
+        yourColor: attachment.playerColor,
+        isYourTurn: game.currentPlayer === attachment.playerColor,
+      };
+      connectedWs.send(JSON.stringify(msg));
+    });
   }
 
   private broadcast(msg: ServerMessage, exclude?: WebSocket) {
