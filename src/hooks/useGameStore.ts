@@ -7,6 +7,7 @@ import {
   createEmptyBoard,
   checkWin,
 } from '@/lib/hex-logic';
+import { getOrCreateLocalPlayerId, trackGameId } from '@/lib/playerIdentity';
 
 type GameMode = 'local' | 'online';
 
@@ -218,19 +219,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   createOnlineGame: async () => {
     try {
+      const localPlayerId = getOrCreateLocalPlayerId();
       const response = await fetch('/api/games/create', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId: localPlayerId }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        const { gameId, playerId, playerColor, shareLink } = result.data;
+        const { gameId, playerColor, shareLink } = result.data;
 
         set({
           gameMode: 'online',
           gameId,
-          playerId,
+          playerId: localPlayerId,
           playerColor,
           shareLink,
           gameState: 'waiting',
@@ -242,8 +246,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           winningPath: [],
           wsConnected: false,
         });
-
-        localStorage.setItem(`game:${gameId}:playerId`, playerId);
+        trackGameId(gameId);
 
         // Connect WebSocket after state is set
         setTimeout(() => get().connectWebSocket(), 0);
@@ -260,19 +263,22 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   joinOnlineGame: async (gameId: string) => {
     try {
+      const localPlayerId = getOrCreateLocalPlayerId();
       const response = await fetch(`/api/games/${gameId}/join`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId: localPlayerId }),
       });
 
       const result = await response.json();
 
       if (result.success) {
-        const { playerId, playerColor, gameState: game } = result.data;
+        const { playerColor, gameState: game } = result.data;
 
         set({
           gameMode: 'online',
           gameId,
-          playerId,
+          playerId: localPlayerId,
           playerColor,
           shareLink: `${window.location.origin}/?game=${gameId}`,
           board: game.board,
@@ -284,8 +290,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
           opponentJoined: true,
           wsConnected: false,
         });
-
-        localStorage.setItem(`game:${gameId}:playerId`, playerId);
+        trackGameId(gameId);
 
         setTimeout(() => get().connectWebSocket(), 0);
       } else {
@@ -325,8 +330,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           opponentJoined: !!game.player2Id,
           wsConnected: false,
         });
+        trackGameId(gameId);
 
         setTimeout(() => get().connectWebSocket(), 0);
+      } else {
+        throw new Error(result.error || 'Failed to load game');
       }
     } catch (error) {
       console.error('Failed to load game:', error);

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { Link } from 'react-router-dom';
 import { useGameStore } from '@/hooks/useGameStore';
 import { Player, BOARD_SIZE } from '@/lib/hex-logic';
 import { Hexagon } from '@/components/Hexagon';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { GameModeSelector } from '@/components/GameModeSelector';
 import { ShareLink } from '@/components/ShareLink';
 import { cn } from '@/lib/utils';
+import { getOrCreateLocalPlayerId } from '@/lib/playerIdentity';
 import { useShallow } from 'zustand/react/shallow';
 
 const GameStatus = () => {
@@ -189,27 +191,25 @@ export function HomePage() {
 
     if (urlGameId && !hasJoinedRef.current) {
       hasJoinedRef.current = true;
-      const storedPlayerId = localStorage.getItem(`game:${urlGameId}:playerId`);
+      const localPlayerId = getOrCreateLocalPlayerId();
 
-      if (storedPlayerId) {
-        // Rejoin existing game
-        loadOnlineGame(urlGameId, storedPlayerId).catch((err) => {
-          console.error('Failed to load game:', err);
-          // Clear invalid stored data
-          localStorage.removeItem(`game:${urlGameId}:playerId`);
+      // First try loading as the same local player, then fallback to joining.
+      loadOnlineGame(urlGameId, localPlayerId).catch((loadErr) => {
+        const message = loadErr instanceof Error ? loadErr.message : '';
+        if (!message.toLowerCase().includes('not a player')) {
+          console.error('Failed to load game:', loadErr);
           hasJoinedRef.current = false;
-        });
-      } else {
-        // Join new game
-        joinOnlineGame(urlGameId).catch((err) => {
-          console.error('Failed to join game:', err);
-          // Only show alert if it's not a "game full" error
-          if (!err.message?.includes('already has 2 players')) {
+          return;
+        }
+
+        joinOnlineGame(urlGameId).catch((joinErr) => {
+          console.error('Failed to join game:', joinErr);
+          if (!joinErr.message?.includes('already has 2 players')) {
             alert('Failed to join game. The game may be full or not exist.');
           }
           hasJoinedRef.current = false;
         });
-      }
+      });
     }
   }, [joinOnlineGame, loadOnlineGame]);
 
@@ -347,6 +347,9 @@ export function HomePage() {
               className="font-semibold text-lg px-8 py-6 bg-gray-800 text-white hover:bg-gray-700 dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300 transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95 shadow-lg"
             >
               New Game
+            </Button>
+            <Button asChild variant="outline" className="px-6 py-6 font-semibold">
+              <Link to="/games">My Games</Link>
             </Button>
             <Button
               variant={debugData ? 'secondary' : 'outline'}

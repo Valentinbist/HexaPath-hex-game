@@ -4,9 +4,10 @@ import { createEmptyBoard, checkWin, Player } from '../src/lib/hex-logic';
 import {
   OnlineGameState,
   generateGameId,
-  generatePlayerId,
   randomColor,
 } from './gameTypes';
+
+const GAME_TTL_SECONDS = 60 * 60 * 24 * 30;
 
 export function userRoutes(app: Hono<{ Bindings: Env }>) {
     // Add more routes like this. **DO NOT MODIFY CORS OR OVERRIDE ERROR HANDLERS**
@@ -38,8 +39,13 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
 
     // Create new online game
     app.post('/api/games/create', async (c) => {
+        const body = await c.req.json().catch(() => ({}));
+        const playerId = typeof body.playerId === 'string' ? body.playerId.trim() : '';
+        if (!playerId) {
+            return c.json({ success: false, error: 'playerId required' }, 400);
+        }
+
         const gameId = generateGameId();
-        const playerId = generatePlayerId();
         const playerColor = randomColor();
 
         const game: OnlineGameState = {
@@ -56,11 +62,11 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             lastMoveAt: new Date().toISOString(),
         };
 
-        // Store in KV with 7-day TTL (604800 seconds)
+        // Store in KV with 30-day TTL
         await c.env.GAMES_KV.put(
             `game:${gameId}`,
             JSON.stringify(game),
-            { expirationTtl: 604800 }
+            { expirationTtl: GAME_TTL_SECONDS }
         );
 
         const shareLink = `${new URL(c.req.url).origin}/?game=${gameId}`;
@@ -79,6 +85,12 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
     // Join existing game
     app.post('/api/games/:id/join', async (c) => {
         const gameId = c.req.param('id');
+        const body = await c.req.json().catch(() => ({}));
+        const playerId = typeof body.playerId === 'string' ? body.playerId.trim() : '';
+        if (!playerId) {
+            return c.json({ success: false, error: 'playerId required' }, 400);
+        }
+
         const gameData = await c.env.GAMES_KV.get(`game:${gameId}`);
 
         if (!gameData) {
@@ -91,7 +103,10 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
             return c.json({ success: false, error: 'Game already has 2 players' }, 400);
         }
 
-        const playerId = generatePlayerId();
+        if (game.player1Id === playerId || game.player2Id === playerId) {
+            return c.json({ success: false, error: 'Player already in game' }, 400);
+        }
+
         game.player2Id = playerId;
         game.gameState = 'playing';
         game.lastMoveAt = new Date().toISOString();
@@ -99,7 +114,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         await c.env.GAMES_KV.put(
             `game:${gameId}`,
             JSON.stringify(game),
-            { expirationTtl: 604800 }
+            { expirationTtl: GAME_TTL_SECONDS }
         );
 
         return c.json({
@@ -209,7 +224,7 @@ export function userRoutes(app: Hono<{ Bindings: Env }>) {
         await c.env.GAMES_KV.put(
             `game:${gameId}`,
             JSON.stringify(game),
-            { expirationTtl: 604800 }
+            { expirationTtl: GAME_TTL_SECONDS }
         );
 
         return c.json({

@@ -11,11 +11,17 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RouteErrorBoundary } from '@/components/RouteErrorBoundary';
 import '@/index.css'
 import { HomePage } from '@/pages/HomePage'
+import { GamesOverviewPage } from '@/pages/GamesOverviewPage'
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <HomePage />,
+    errorElement: <RouteErrorBoundary />,
+  },
+  {
+    path: "/games",
+    element: <GamesOverviewPage />,
     errorElement: <RouteErrorBoundary />,
   },
 ]);
