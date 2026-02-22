@@ -12,6 +12,12 @@ import { cn } from '@/lib/utils';
 import { getOrCreateLocalPlayerId } from '@/lib/playerIdentity';
 import { useShallow } from 'zustand/react/shallow';
 
+declare global {
+  interface Window {
+    dumpHexGameState?: () => Promise<string>;
+  }
+}
+
 const GameStatus = () => {
   const gameState = useGameStore((s) => s.gameState);
   const gameMode = useGameStore((s) => s.gameMode);
@@ -166,8 +172,6 @@ const GameBoard = () => {
 
 export function HomePage() {
   const [showModeSelector, setShowModeSelector] = useState(false);
-  const [debugData, setDebugData] = useState<string | null>(null);
-  const [debugNote, setDebugNote] = useState('');
   const hasJoinedRef = useRef(false);
   const gameState = useGameStore((s) => s.gameState);
   const gameMode = useGameStore((s) => s.gameMode);
@@ -302,14 +306,16 @@ export function HomePage() {
       console.warn('Clipboard write failed:', err);
       note = 'Clipboard write failed; state logged to console.';
     }
-    setDebugData(formatted);
-    setDebugNote(note);
+    console.info(note);
+    return formatted;
   };
 
-  const handleClearDebug = () => {
-    setDebugData(null);
-    setDebugNote('');
-  };
+  useEffect(() => {
+    window.dumpHexGameState = handleDumpGameState;
+    return () => {
+      delete window.dumpHexGameState;
+    };
+  }, []);
 
   return (
     <main className="min-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 flex flex-col items-center justify-center p-4 sm:p-6 lg:p-8">
@@ -357,27 +363,8 @@ export function HomePage() {
             <Button asChild variant="outline" className="px-6 py-6 font-semibold">
               <Link to="/games">My Games</Link>
             </Button>
-            <Button
-              variant={debugData ? 'secondary' : 'outline'}
-              onClick={debugData ? handleClearDebug : handleDumpGameState}
-              className="px-6 py-6 font-semibold"
-            >
-              {debugData ? 'Hide Debug State' : 'Debug Game State'}
-            </Button>
           </div>
         </motion.div>
-
-        {debugData && (
-          <div className="w-full max-w-3xl mx-auto bg-gray-900 text-gray-100 rounded-lg p-4 shadow-inner border border-gray-700">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-semibold">Current Game State</span>
-              {debugNote && <span className="text-xs text-gray-400">{debugNote}</span>}
-            </div>
-            <pre className="text-xs whitespace-pre-wrap break-words max-h-64 overflow-auto">
-              {debugData}
-            </pre>
-          </div>
-        )}
       </div>
 
       <GameModeSelector
