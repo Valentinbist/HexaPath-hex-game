@@ -1,21 +1,30 @@
-# Deploy to dev (testing). Runs on merge to main or manual trigger.
-name: Deploy to Develop
+name: Deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+        default: dev
 
 concurrency:
-  group: pages-develop
+  group: deploy-${{ inputs.environment || 'dev' }}
   cancel-in-progress: true
 
 jobs:
-  apply-dev-infra:
-    name: Apply Dev Infra
+  infra:
+    name: Apply Infra (${{ inputs.environment || 'dev' }})
     runs-on: ubuntu-latest
     env:
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      STACK: ${{ inputs.environment == 'prod' && 'hex-prod' || 'hex-dev' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -29,6 +38,7 @@ jobs:
           node-version: 20
           check-latest: true
           cache: "pnpm"
+          cache-dependency-path: infra/pnpm-lock.yaml
 
       - name: Install Pulumi CLI
         run: |
@@ -43,18 +53,20 @@ jobs:
         working-directory: infra
         run: pnpm run build
 
-      - name: Pulumi up (dev)
+      - name: Pulumi up
         working-directory: infra
         run: |
-          pulumi stack select Valentinbister/hex-dev
+          pulumi stack select Valentinbister/$STACK
           pulumi up --yes
 
-  deploy-develop:
-    name: Deploy to Develop
+  deploy:
+    name: Build & Deploy (${{ inputs.environment || 'dev' }})
     runs-on: ubuntu-latest
-    needs: apply-dev-infra
+    needs: infra
     env:
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      STACK: ${{ inputs.environment == 'prod' && 'hex-prod' || 'hex-dev' }}
+      DEFAULT_PROJECT: ${{ inputs.environment == 'prod' && 'hexapath' || 'hexapath-dev' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -76,12 +88,12 @@ jobs:
           curl -fsSL https://get.pulumi.com | sh
           echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
 
-      - name: Get Cloudflare credentials from Pulumi (dev stack)
+      - name: Get Cloudflare credentials from Pulumi
         working-directory: infra
         run: |
-          pulumi stack select Valentinbister/hex-dev
+          pulumi stack select Valentinbister/$STACK
           echo "CLOUDFLARE_ACCOUNT_ID=$(pulumi config get accountId)" >> $GITHUB_ENV
-          echo "PAGES_PROJECT_NAME=$(pulumi config get projectName 2>/dev/null || echo 'hexapath-dev')" >> $GITHUB_ENV
+          echo "PAGES_PROJECT_NAME=$(pulumi config get projectName 2>/dev/null || echo "$DEFAULT_PROJECT")" >> $GITHUB_ENV
           echo "CLOUDFLARE_API_TOKEN<<PULUMI_SECRET" >> $GITHUB_ENV
           pulumi config --show-secrets --json | jq -r '."cloudflare:apiToken".value // ."cloudflare:apiToken"' >> $GITHUB_ENV
           echo "PULUMI_SECRET" >> $GITHUB_ENV

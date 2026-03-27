@@ -52,13 +52,6 @@ if (zoneId && customDomain) {
 
 let accessApp: cloudflare.ZeroTrustAccessApplication | undefined;
 if (enableZeroTrust && zoneId && customDomain) {
-  const idps = cloudflare.getZeroTrustAccessIdentityProvidersOutput({ accountId });
-  const otpIdpId = idps.results.apply((results) => {
-    const otp = results.find((r) => r.type === "onetimepin");
-    if (!otp) throw new Error("One-time PIN identity provider not found in Cloudflare Zero Trust. Add it in the dashboard first.");
-    return otp.id;
-  });
-
   const policyIncludes = pulumi.all([accessEmails, accessEmailDomains]).apply(([emails, domains]) => {
     const includes: Record<string, unknown>[] = [];
     for (const email of emails ?? []) includes.push({ email: { email } });
@@ -73,8 +66,6 @@ if (enableZeroTrust && zoneId && customDomain) {
     type: "self_hosted",
     domain: customDomain,
     sessionDuration: "24h",
-    allowedIdps: otpIdpId.apply((id) => [id]),
-    autoRedirectToIdentity: true,
     policies: [
       {
         name: "Allowed users",
