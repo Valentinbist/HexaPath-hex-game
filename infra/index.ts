@@ -5,51 +5,31 @@ const config = new pulumi.Config();
 const stack = pulumi.getStack();
 
 const accountId = config.require("accountId");
-const projectName = config.get("projectName") ?? (stack === "hex-dev" ? "hexapath-dev" : "hexapath");
+const workerName = config.get("projectName") ?? (stack === "hex-dev" ? "hexapath-dev" : "hexapath");
 const customDomain = config.get("customDomain");
 const zoneId = config.get("zoneId");
 const enableZeroTrust = config.getBoolean("enableZeroTrust") ?? false;
 const accessEmails = config.getSecret("accessEmails")?.apply((v) => v.split(",").map((e) => e.trim()));
 const accessEmailDomains = config.getSecret("accessEmailDomains")?.apply((v) => v.split(",").map((d) => d.trim()));
 
-const pagesProject = new cloudflare.PagesProject("hexapath-pages", {
-  accountId,
-  name: projectName,
-  productionBranch: "main",
-  buildConfig: {
-    buildCommand: "bun run build",
-    destinationDir: "dist",
-    rootDir: "/",
-    buildCaching: true,
-  },
-});
-
-let pagesDomain: cloudflare.PagesDomain | undefined;
-if (customDomain) {
-  pagesDomain = new cloudflare.PagesDomain("hexapath-domain", {
-    accountId,
-    projectName: pagesProject.name,
-    name: customDomain,
-  });
-}
-
+// DNS CNAME: custom domain → Worker's workers.dev hostname
 let dnsRecord: cloudflare.DnsRecord | undefined;
 if (zoneId && customDomain) {
   const zone = cloudflare.getZoneOutput({ zoneId });
   const recordName = zone.name.apply((zoneName) =>
     customDomain === zoneName ? "@" : customDomain.replace(`.${zoneName}`, "")
   );
-  const recordContent = pagesProject.name.apply((name) => `${name}.pages.dev`);
-  dnsRecord = new cloudflare.DnsRecord("hexapath-pages-cname", {
+  dnsRecord = new cloudflare.DnsRecord("hexapath-cname", {
     zoneId,
     name: recordName,
     type: "CNAME",
-    content: recordContent,
+    content: `${workerName}.workers.dev`,
     ttl: 1,
     proxied: true,
   });
 }
 
+// Zero Trust Access for dev
 let accessApp: cloudflare.ZeroTrustAccessApplication | undefined;
 if (enableZeroTrust && zoneId && customDomain) {
   const policyIncludes = pulumi.all([accessEmails, accessEmailDomains]).apply(([emails, domains]) => {
@@ -78,8 +58,7 @@ if (enableZeroTrust && zoneId && customDomain) {
 }
 
 export const stackName = stack;
-export const projectNameOutput = pagesProject.name;
-export const projectId = pagesProject.id;
-export const customDomainOutput = pagesDomain?.name;
+export const workerNameOutput = workerName;
+export const customDomainOutput = customDomain;
 export const accessApplicationId = accessApp?.id;
-export const pagesCnameId = dnsRecord?.id;
+export const dnsCnameId = dnsRecord?.id;

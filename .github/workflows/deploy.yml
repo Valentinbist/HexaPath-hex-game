@@ -66,7 +66,7 @@ jobs:
     env:
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
       STACK: ${{ inputs.environment == 'prod' && 'hex-prod' || 'hex-dev' }}
-      DEFAULT_PROJECT: ${{ inputs.environment == 'prod' && 'hexapath' || 'hexapath-dev' }}
+      WORKER_NAME: ${{ inputs.environment == 'prod' && 'hexapath' || 'hexapath-dev' }}
     steps:
       - uses: actions/checkout@v4
 
@@ -93,7 +93,6 @@ jobs:
         run: |
           pulumi stack select Valentinbister/$STACK
           echo "CLOUDFLARE_ACCOUNT_ID=$(pulumi config get accountId)" >> $GITHUB_ENV
-          echo "PAGES_PROJECT_NAME=$(pulumi config get projectName 2>/dev/null || echo "$DEFAULT_PROJECT")" >> $GITHUB_ENV
           echo "CLOUDFLARE_API_TOKEN<<PULUMI_SECRET" >> $GITHUB_ENV
           pulumi config --show-secrets --json | jq -r '."cloudflare:apiToken".value // ."cloudflare:apiToken"' >> $GITHUB_ENV
           echo "PULUMI_SECRET" >> $GITHUB_ENV
@@ -105,4 +104,4 @@ jobs:
         run: bun run build
 
       - name: Deploy with Wrangler
-        run: bunx wrangler pages deploy dist --project-name "$PAGES_PROJECT_NAME"
+        run: bunx wrangler deploy --name "$WORKER_NAME"
