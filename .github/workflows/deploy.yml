@@ -19,50 +19,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  infra:
-    name: Apply Infra (${{ inputs.environment || 'dev' }})
-    runs-on: ubuntu-latest
-    env:
-      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
-      STACK: ${{ inputs.environment == 'prod' && 'hex-prod' || 'hex-dev' }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 9
-          run_install: false
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          check-latest: true
-          cache: "pnpm"
-          cache-dependency-path: infra/pnpm-lock.yaml
-
-      - name: Install Pulumi CLI
-        run: |
-          curl -fsSL https://get.pulumi.com | sh
-          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
-
-      - name: Install infra dependencies
-        working-directory: infra
-        run: pnpm install --frozen-lockfile
-
-      - name: Build infra (TypeScript)
-        working-directory: infra
-        run: pnpm run build
-
-      - name: Pulumi up
-        working-directory: infra
-        run: |
-          pulumi stack select Valentinbister/$STACK
-          pulumi up --yes
-
   deploy:
     name: Build & Deploy (${{ inputs.environment || 'dev' }})
     runs-on: ubuntu-latest
-    needs: infra
     env:
       PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
       STACK: ${{ inputs.environment == 'prod' && 'hex-prod' || 'hex-dev' }}
@@ -82,6 +41,8 @@ jobs:
         with:
           node-version: 20
           check-latest: true
+          cache: "pnpm"
+          cache-dependency-path: infra/pnpm-lock.yaml
 
       - name: Install Pulumi CLI
         run: |
@@ -103,5 +64,21 @@ jobs:
       - name: Build
         run: bun run build
 
-      - name: Deploy with Wrangler
+      - name: Deploy Worker
         run: bunx wrangler deploy --name "$WORKER_NAME"
+
+      - name: Install infra dependencies
+        working-directory: infra
+        run: pnpm install --frozen-lockfile
+
+      - name: Build infra (TypeScript)
+        working-directory: infra
+        run: pnpm run build
+
+      - name: Apply infra (custom domain + Zero Trust)
+        working-directory: infra
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        run: |
+          pulumi stack select Valentinbister/$STACK
+          pulumi up --yes

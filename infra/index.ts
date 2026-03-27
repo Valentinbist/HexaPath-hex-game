@@ -12,20 +12,14 @@ const enableZeroTrust = config.getBoolean("enableZeroTrust") ?? false;
 const accessEmails = config.getSecret("accessEmails")?.apply((v) => v.split(",").map((e) => e.trim()));
 const accessEmailDomains = config.getSecret("accessEmailDomains")?.apply((v) => v.split(",").map((d) => d.trim()));
 
-// DNS CNAME: custom domain → Worker's workers.dev hostname
-let dnsRecord: cloudflare.DnsRecord | undefined;
+// Worker Custom Domain: routes traffic for the custom domain to the Worker and handles SSL
+let workerDomain: cloudflare.WorkerDomain | undefined;
 if (zoneId && customDomain) {
-  const zone = cloudflare.getZoneOutput({ zoneId });
-  const recordName = zone.name.apply((zoneName) =>
-    customDomain === zoneName ? "@" : customDomain.replace(`.${zoneName}`, "")
-  );
-  dnsRecord = new cloudflare.DnsRecord("hexapath-cname", {
+  workerDomain = new cloudflare.WorkerDomain("hexapath-domain", {
+    accountId,
+    hostname: customDomain,
+    service: workerName,
     zoneId,
-    name: recordName,
-    type: "CNAME",
-    content: `${workerName}.workers.dev`,
-    ttl: 1,
-    proxied: true,
   });
 }
 
@@ -60,5 +54,5 @@ if (enableZeroTrust && zoneId && customDomain) {
 export const stackName = stack;
 export const workerNameOutput = workerName;
 export const customDomainOutput = customDomain;
+export const workerDomainId = workerDomain?.id;
 export const accessApplicationId = accessApp?.id;
-export const dnsCnameId = dnsRecord?.id;
