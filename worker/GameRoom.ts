@@ -10,7 +10,8 @@ interface SessionAttachment {
 }
 
 type ClientMessage =
-  | { type: 'move'; row: number; col: number };
+  | { type: 'move'; row: number; col: number }
+  | { type: 'forfeit' };
 
 type ServerMessage =
   | { type: 'state'; gameState: OnlineGameState; yourColor: Player.BLUE | Player.RED; isYourTurn: boolean }
@@ -116,6 +117,8 @@ export class GameRoom extends DurableObject<Env> {
 
     if (parsed.type === 'move') {
       await this.handleMove(ws, session, parsed.row, parsed.col);
+    } else if (parsed.type === 'forfeit') {
+      await this.handleForfeit(ws, session);
     }
   }
 
@@ -171,6 +174,40 @@ export class GameRoom extends DurableObject<Env> {
     } else {
       game.currentPlayer = game.currentPlayer === Player.BLUE ? Player.RED : Player.BLUE;
     }
+
+    await this.env.GAMES_KV.put(
+      `game:${gameId}`,
+      JSON.stringify(game),
+      { expirationTtl: 604800 },
+    );
+
+    this.broadcastState(game);
+  }
+
+  private async handleForfeit(ws: WebSocket, session: SessionAttachment) {
+    const gameId = this.getGameId();
+    if (!gameId) {
+      this.sendError(ws, 'No game associated with this room');
+      return;
+    }
+
+    const gameData = await this.env.GAMES_KV.get(`game:${gameId}`);
+    if (!gameData) {
+      this.sendError(ws, 'Game not found');
+      return;
+    }
+
+    const game: OnlineGameState = JSON.parse(gameData);
+
+    if (game.gameState !== 'playing') {
+      this.sendError(ws, 'Game is not in playing state');
+      return;
+    }
+
+    const opponentColor = session.playerColor === Player.BLUE ? Player.RED : Player.BLUE;
+    game.gameState = 'won';
+    game.winner = opponentColor;
+    game.winningPath = [];
 
     await this.env.GAMES_KV.put(
       `game:${gameId}`,

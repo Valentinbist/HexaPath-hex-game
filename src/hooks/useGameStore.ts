@@ -33,6 +33,8 @@ interface GameStore {
   wsConnected: boolean;
 
   makeMove: (row: number, col: number) => Promise<void>;
+  giveUp: () => void;
+  rematch: () => void;
   resetGame: () => void;
   setLocalMode: () => void;
   createOnlineGame: () => Promise<{ gameId: string; shareLink: string }>;
@@ -128,6 +130,48 @@ export const useGameStore = create<GameStore>((set, get) => ({
         });
       }
     }
+  },
+
+  giveUp: () => {
+    const { gameMode, gameState, currentPlayer } = get();
+    if (gameState !== 'playing') return;
+
+    const opponent = currentPlayer === Player.BLUE ? Player.RED : Player.BLUE;
+
+    if (gameMode === 'online') {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'forfeit' }));
+        return;
+      }
+      // If WS is down, apply forfeit locally so the player sees the result
+    }
+
+    set({
+      gameState: 'won',
+      winner: opponent,
+      winningPath: [],
+    });
+  },
+
+  rematch: () => {
+    const { gameMode } = get();
+    if (gameMode === 'online') {
+      get().disconnectWebSocket();
+    }
+    set({
+      board: createEmptyBoard(),
+      currentPlayer: Player.BLUE,
+      gameState: 'playing',
+      winner: null,
+      winningPath: [],
+      gameMode: 'local',
+      gameId: null,
+      playerId: null,
+      playerColor: null,
+      isYourTurn: true,
+      opponentJoined: false,
+      shareLink: null,
+    });
   },
 
   resetGame: () => {

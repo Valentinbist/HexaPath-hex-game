@@ -187,6 +187,8 @@ export function HomePage() {
   const loadOnlineGame = useGameStore((s) => s.loadOnlineGame);
   const disconnectWebSocket = useGameStore((s) => s.disconnectWebSocket);
   const resetGame = useGameStore((s) => s.resetGame);
+  const giveUp = useGameStore((s) => s.giveUp);
+  const rematch = useGameStore((s) => s.rematch);
 
   // Handle URL parameter for joining games
   useEffect(() => {
@@ -336,6 +338,44 @@ export function HomePage() {
 
         <GameStatus />
         <GameBoard />
+
+        <AnimatePresence mode="wait">
+          {gameState === 'playing' && (
+            <motion.div
+              key="give-up"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Button
+                onClick={giveUp}
+                variant="outline"
+                size="lg"
+                className="font-semibold text-lg px-8 py-6 border-red-400 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-500 dark:text-red-400 dark:hover:bg-red-950 dark:hover:text-red-300 transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95"
+              >
+                Give Up
+              </Button>
+            </motion.div>
+          )}
+          {gameState === 'won' && (
+            <motion.div
+              key="rematch"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3, delay: 0.5 }}
+            >
+              <Button
+                onClick={rematch}
+                size="lg"
+                className="font-semibold text-lg px-8 py-6 bg-green-600 text-white hover:bg-green-500 dark:bg-green-600 dark:hover:bg-green-500 transition-all duration-200 ease-in-out transform hover:scale-105 active:scale-95 shadow-lg"
+              >
+                Rematch
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {gameMode === 'online' && gameState === 'waiting' && gameId && shareLink && (
           <motion.div
