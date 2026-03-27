@@ -1,0 +1,19 @@
+{
+  "name": "hexapath-infra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "preview": "pnpm run build && pulumi preview",
+    "up": "pnpm run build && pulumi up",
+    "destroy": "pulumi destroy"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "dependencies": {
+    "@pulumi/cloudflare": "^6.13.0",
+    "@pulumi/pulumi": "^3.0.0"
+  }
+}

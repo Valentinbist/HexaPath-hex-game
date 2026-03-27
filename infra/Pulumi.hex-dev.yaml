@@ -1,0 +1,13 @@
+config:
+  hexapath-infra:projectName: hexapath-dev
+  hexapath-infra:enableZeroTrust: "true"
+  hexapath-infra:customDomain:
+    secure: AAABAGv70Sjf4cKZIwsTER0Z4UcFBngmvhqLmIctxTfsJE5jlb7DybKPZ+28XkDkSQmPeNrTBYc=
+  hexapath-infra:accountId:
+    secure: AAABADRlIuA+Ojh9Dv63u7+QTzk8PadPviQ2UcOH+PQFFBmL0e+ktOgR0aMcpemiT2d0BiQHrtjHx/SRxY883w==
+  hexapath-infra:zoneId:
+    secure: AAABABILZWWUQWUKukkXR01tZCi2ngPe/Ms3Qknapedh4azReC68OdccxUxPqAibyTDiGISPoWKfUUmQbP7dwA==
+  cloudflare:apiToken:
+    secure: AAABANi0aY5xY0To7KS54/68rYixXdyzs5KoUR04Ht4ZhOUq+YRlBTkPYScL9TBnVELR4YzNigFnEhaJuZGgbtp9Bb3n2jQnX+I3MWm+KCllkd7kQg==
+  hexapath-infra:accessEmails:
+    secure: AAABAHVFO/hHpWX3mAAwPtuE38AOxo2g9OiY7iSe78z86wBuFbIr8CGfTyc/7jI5QwY2M8/qGrWB

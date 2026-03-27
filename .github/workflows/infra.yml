@@ -1,0 +1,57 @@
+# Preview Pulumi infrastructure changes (Cloudflare Pages project, custom domains, Zero Trust).
+# Runs on pull requests touching infra. Applying infra is handled by the deploy workflows.
+name: Infra (Pulumi)
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "infra/**"
+      - ".github/workflows/infra.yml"
+
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    name: Preview (${{ matrix.stack }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        stack: [hex-dev, hex-prod]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          check-latest: true
+          cache: "pnpm"
+
+      - name: Install Pulumi CLI
+        run: |
+          curl -fsSL https://get.pulumi.com | sh
+          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
+
+      - name: Install infra dependencies
+        working-directory: infra
+        run: pnpm install --frozen-lockfile
+
+      - name: Build infra (TypeScript)
+        working-directory: infra
+        run: pnpm run build
+
+      - name: Pulumi preview
+        working-directory: infra
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+        run: |
+          pulumi stack select Valentinbister/${{ matrix.stack }}
+          pulumi preview --diff

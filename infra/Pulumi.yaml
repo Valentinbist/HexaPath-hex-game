@@ -1,0 +1,6 @@
+name: hexapath-infra
+runtime: nodejs
+description: Cloudflare Pages project and related resources for HexaPath
+main: bin/index.js
+backend:
+  url: https://api.pulumi.com

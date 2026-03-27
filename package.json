@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint --cache -f json --quiet .",
     "preview": "bun run build && vite preview --host 0.0.0.0 --port ${PORT:-4173}",
+    "typecheck": "tsc -b",
     "deploy": "bun run build && wrangler deploy",
     "cf-typegen": "wrangler types"
   },

@@ -1,0 +1,7 @@
+node_modules/
+bin/
+Pulumi.*.yaml
+!Pulumi.hex-dev.yaml
+!Pulumi.hex-prod.yaml
+.pnpm-store/
+.env

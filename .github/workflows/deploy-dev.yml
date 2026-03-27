@@ -1,0 +1,96 @@
+# Deploy to dev (testing). Runs on merge to main or manual trigger.
+name: Deploy to Develop
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: pages-develop
+  cancel-in-progress: true
+
+jobs:
+  apply-dev-infra:
+    name: Apply Dev Infra
+    runs-on: ubuntu-latest
+    env:
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          check-latest: true
+          cache: "pnpm"
+
+      - name: Install Pulumi CLI
+        run: |
+          curl -fsSL https://get.pulumi.com | sh
+          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
+
+      - name: Install infra dependencies
+        working-directory: infra
+        run: pnpm install --frozen-lockfile
+
+      - name: Build infra (TypeScript)
+        working-directory: infra
+        run: pnpm run build
+
+      - name: Pulumi up (dev)
+        working-directory: infra
+        run: |
+          pulumi stack select Valentinbister/hex-dev
+          pulumi up --yes
+
+  deploy-develop:
+    name: Deploy to Develop
+    runs-on: ubuntu-latest
+    needs: apply-dev-infra
+    env:
+      PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+          run_install: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          check-latest: true
+
+      - name: Install Pulumi CLI
+        run: |
+          curl -fsSL https://get.pulumi.com | sh
+          echo "$HOME/.pulumi/bin" >> $GITHUB_PATH
+
+      - name: Get Cloudflare credentials from Pulumi (dev stack)
+        working-directory: infra
+        run: |
+          pulumi stack select Valentinbister/hex-dev
+          echo "CLOUDFLARE_ACCOUNT_ID=$(pulumi config get accountId)" >> $GITHUB_ENV
+          echo "PAGES_PROJECT_NAME=$(pulumi config get projectName 2>/dev/null || echo 'hexapath-dev')" >> $GITHUB_ENV
+          echo "CLOUDFLARE_API_TOKEN<<PULUMI_SECRET" >> $GITHUB_ENV
+          pulumi config --show-secrets --json | jq -r '."cloudflare:apiToken".value // ."cloudflare:apiToken"' >> $GITHUB_ENV
+          echo "PULUMI_SECRET" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build
+        run: bun run build
+
+      - name: Deploy with Wrangler
+        run: bunx wrangler pages deploy dist --project-name "$PAGES_PROJECT_NAME"
