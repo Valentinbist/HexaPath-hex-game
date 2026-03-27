@@ -12,7 +12,7 @@ type GameListItem = {
   id: string;
   gameState: 'waiting' | 'playing' | 'won';
   currentPlayer: Player.BLUE | Player.RED;
-  winner: Player | null;
+  winner: Player.BLUE | Player.RED | null;
   lastMoveAt: string;
   createdAt: string;
   yourColor: Player.BLUE | Player.RED;
