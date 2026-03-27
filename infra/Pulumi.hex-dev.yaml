@@ -4,7 +4,7 @@ config:
   hexapath-infra:customDomain:
     secure: AAABAGv70Sjf4cKZIwsTER0Z4UcFBngmvhqLmIctxTfsJE5jlb7DybKPZ+28XkDkSQmPeNrTBYc=
   hexapath-infra:accountId:
-    secure: AAABADRlIuA+Ojh9Dv63u7+QTzk8PadPviQ2UcOH+PQFFBmL0e+ktOgR0aMcpemiT2d0BiQHrtjHx/SRxY883w==
+    secure: AAABAH6vRLrMnhri5vP36JG4jRdEZTbbu6XP1BD7mdQfNkN0U2lxCUMHFW1Em5Y+5GlUBABiQN/oUeyX+Fd3yQ==
   hexapath-infra:zoneId:
     secure: AAABABILZWWUQWUKukkXR01tZCi2ngPe/Ms3Qknapedh4azReC68OdccxUxPqAibyTDiGISPoWKfUUmQbP7dwA==
   cloudflare:apiToken:
