@@ -19,8 +19,17 @@ type ServerMessage =
   | { type: 'opponent_connected' }
   | { type: 'opponent_disconnected' };
 
+interface ProcessResult {
+  success: boolean;
+  error?: string;
+  data?: Record<string, unknown>;
+}
+
+const GAME_TTL_MS = 1000 * 60 * 60 * 24 * 30; // 30 days
+
 export class GameRoom extends DurableObject<Env> {
   private sessions: Map<WebSocket, SessionAttachment>;
+  private cachedGame: OnlineGameState | null = null;
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -38,30 +47,79 @@ export class GameRoom extends DurableObject<Env> {
     );
   }
 
+  // ── Routing ──────────────────────────────────────────────────────────
+
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    const playerId = url.searchParams.get('playerId');
+    const upgradeHeader = request.headers.get('Upgrade');
 
+    if (upgradeHeader === 'websocket') {
+      return this.handleWsUpgrade(url);
+    }
+
+    const action = url.pathname.replace(/^\//, '');
+
+    if (request.method === 'POST') {
+      const body = await request.json() as Record<string, unknown>;
+
+      switch (action) {
+        case 'init': {
+          await this.persistGame(body.game as OnlineGameState);
+          return jsonResponse({ success: true });
+        }
+        case 'join': {
+          const result = await this.processJoin(body.playerId as string);
+          return jsonResponse(result, result.success ? 200 : 400);
+        }
+        case 'move': {
+          const result = await this.processMove(
+            body.playerId as string,
+            body.row as number,
+            body.col as number,
+          );
+          return jsonResponse(result, result.success ? 200 : 400);
+        }
+        case 'forfeit': {
+          const result = await this.processForfeit(body.playerId as string);
+          return jsonResponse(result, result.success ? 200 : 400);
+        }
+        default:
+          return jsonResponse({ success: false, error: 'Unknown action' }, 400);
+      }
+    }
+
+    if (request.method === 'GET' && action === 'state') {
+      const playerId = url.searchParams.get('playerId');
+      if (!playerId) {
+        return jsonResponse({ success: false, error: 'playerId required' }, 400);
+      }
+      return this.handleGetState(playerId);
+    }
+
+    return new Response('Method not allowed', { status: 405 });
+  }
+
+  async alarm() {
+    if (this.ctx.getWebSockets().length > 0) {
+      await this.ctx.storage.setAlarm(Date.now() + GAME_TTL_MS);
+      return;
+    }
+    this.cachedGame = null;
+    await this.ctx.storage.deleteAll();
+  }
+
+  // ── WebSocket lifecycle ──────────────────────────────────────────────
+
+  private async handleWsUpgrade(url: URL): Promise<Response> {
+    const playerId = url.searchParams.get('playerId');
     if (!playerId) {
       return new Response('playerId query param required', { status: 400 });
     }
 
-    const upgradeHeader = request.headers.get('Upgrade');
-    if (!upgradeHeader || upgradeHeader !== 'websocket') {
-      return new Response('Expected Upgrade: websocket', { status: 426 });
-    }
-
-    const gameId = url.searchParams.get('gameId');
-    if (!gameId) {
-      return new Response('gameId query param required', { status: 400 });
-    }
-
-    const gameData = await this.env.GAMES_KV.get(`game:${gameId}`);
-    if (!gameData) {
+    const game = await this.loadGame();
+    if (!game) {
       return new Response('Game not found', { status: 404 });
     }
-
-    const game: OnlineGameState = JSON.parse(gameData);
 
     const isPlayer1 = game.player1Id === playerId;
     const isPlayer2 = game.player2Id === playerId;
@@ -75,7 +133,11 @@ export class GameRoom extends DurableObject<Env> {
     const webSocketPair = new WebSocketPair();
     const [client, server] = Object.values(webSocketPair);
 
-    const attachment: SessionAttachment = { gameId, playerId, playerColor: yourColor };
+    const attachment: SessionAttachment = {
+      gameId: game.id,
+      playerId,
+      playerColor: yourColor,
+    };
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment(attachment);
     this.sessions.set(server, attachment);
@@ -83,8 +145,6 @@ export class GameRoom extends DurableObject<Env> {
     this.broadcast({ type: 'opponent_connected' }, server);
 
     if (game.player2Id) {
-      // When both players are present, broadcast authoritative state so an already-connected
-      // host can transition from "waiting" to "playing" immediately on opponent join.
       this.broadcastState(game);
     } else {
       server.send(JSON.stringify({
@@ -116,9 +176,15 @@ export class GameRoom extends DurableObject<Env> {
     }
 
     if (parsed.type === 'move') {
-      await this.handleMove(ws, session, parsed.row, parsed.col);
+      const result = await this.processMove(session.playerId, parsed.row, parsed.col);
+      if (!result.success) {
+        this.sendError(ws, result.error!);
+      }
     } else if (parsed.type === 'forfeit') {
-      await this.handleForfeit(ws, session);
+      const result = await this.processForfeit(session.playerId);
+      if (!result.success) {
+        this.sendError(ws, result.error!);
+      }
     }
   }
 
@@ -128,106 +194,133 @@ export class GameRoom extends DurableObject<Env> {
     this.broadcast({ type: 'opponent_disconnected' });
   }
 
-  private async handleMove(ws: WebSocket, session: SessionAttachment, row: number, col: number) {
-    const gameId = this.getGameId();
-    if (!gameId) {
-      this.sendError(ws, 'No game associated with this room');
-      return;
+  // ── HTTP handler ─────────────────────────────────────────────────────
+
+  private async handleGetState(playerId: string): Promise<Response> {
+    const game = await this.loadGame();
+    if (!game) {
+      return jsonResponse({ success: false, error: 'Game not found' }, 404);
     }
 
-    const gameData = await this.env.GAMES_KV.get(`game:${gameId}`);
-    if (!gameData) {
-      this.sendError(ws, 'Game not found');
-      return;
+    const isPlayer1 = game.player1Id === playerId;
+    const isPlayer2 = game.player2Id === playerId;
+
+    if (!isPlayer1 && !isPlayer2) {
+      return jsonResponse({ success: false, error: 'Not a player in this game' }, 403);
     }
 
-    const game: OnlineGameState = JSON.parse(gameData);
+    const yourColor = isPlayer1 ? game.player1Color : game.player2Color;
+    const isYourTurn = game.currentPlayer === yourColor;
 
-    if (game.currentPlayer !== session.playerColor) {
-      this.sendError(ws, 'Not your turn');
-      return;
-    }
+    return jsonResponse({
+      success: true,
+      data: { gameState: game, yourColor, isYourTurn },
+    });
+  }
 
-    if (game.gameState !== 'playing') {
-      this.sendError(ws, 'Game is not in playing state');
-      return;
-    }
+  // ── Shared game logic (used by both WS and HTTP paths) ──────────────
 
-    if (row < 0 || row >= game.board.length || col < 0 || col >= game.board[0].length) {
-      this.sendError(ws, 'Invalid position');
-      return;
-    }
+  private async processJoin(playerId: string): Promise<ProcessResult> {
+    const game = await this.loadGame();
+    if (!game) return { success: false, error: 'Game not found' };
 
-    if (game.board[row][col] !== Player.EMPTY) {
-      this.sendError(ws, 'Cell already occupied');
-      return;
-    }
+    if (game.player2Id) return { success: false, error: 'Game already has 2 players' };
+    if (game.player1Id === playerId) return { success: false, error: 'Player already in game' };
 
-    game.board[row][col] = session.playerColor;
+    game.player2Id = playerId;
+    game.gameState = 'playing';
     game.lastMoveAt = new Date().toISOString();
 
-    const winningPath = checkWin(game.board, session.playerColor);
+    await this.persistGame(game);
+    this.broadcastState(game);
+
+    return {
+      success: true,
+      data: {
+        playerId,
+        playerColor: game.player2Color as unknown as string,
+        gameState: game as unknown as Record<string, unknown>,
+      },
+    };
+  }
+
+  private async processMove(playerId: string, row: number, col: number): Promise<ProcessResult> {
+    const game = await this.loadGame();
+    if (!game) return { success: false, error: 'Game not found' };
+
+    const isPlayer1 = game.player1Id === playerId;
+    const isPlayer2 = game.player2Id === playerId;
+    if (!isPlayer1 && !isPlayer2) return { success: false, error: 'Not a player in this game' };
+
+    const yourColor = isPlayer1 ? game.player1Color : game.player2Color;
+
+    if (game.currentPlayer !== yourColor) return { success: false, error: 'Not your turn' };
+    if (game.gameState !== 'playing') return { success: false, error: 'Game is not in playing state' };
+    if (row < 0 || row >= game.board.length || col < 0 || col >= game.board[0].length) {
+      return { success: false, error: 'Invalid position' };
+    }
+    if (game.board[row][col] !== Player.EMPTY) return { success: false, error: 'Cell already occupied' };
+
+    game.board[row][col] = yourColor;
+    game.lastMoveAt = new Date().toISOString();
+
+    const winningPath = checkWin(game.board, yourColor);
     if (winningPath) {
       game.gameState = 'won';
-      game.winner = session.playerColor;
+      game.winner = yourColor;
       game.winningPath = winningPath;
     } else {
       game.currentPlayer = game.currentPlayer === Player.BLUE ? Player.RED : Player.BLUE;
     }
 
-    await this.env.GAMES_KV.put(
-      `game:${gameId}`,
-      JSON.stringify(game),
-      { expirationTtl: 604800 },
-    );
-
+    await this.persistGame(game);
     this.broadcastState(game);
+
+    return { success: true, data: { gameState: game as unknown as Record<string, unknown> } };
   }
 
-  private async handleForfeit(ws: WebSocket, session: SessionAttachment) {
-    const gameId = this.getGameId();
-    if (!gameId) {
-      this.sendError(ws, 'No game associated with this room');
-      return;
-    }
+  private async processForfeit(playerId: string): Promise<ProcessResult> {
+    const game = await this.loadGame();
+    if (!game) return { success: false, error: 'Game not found' };
+    if (game.gameState !== 'playing') return { success: false, error: 'Game is not in playing state' };
 
-    const gameData = await this.env.GAMES_KV.get(`game:${gameId}`);
-    if (!gameData) {
-      this.sendError(ws, 'Game not found');
-      return;
-    }
+    const isPlayer1 = game.player1Id === playerId;
+    const isPlayer2 = game.player2Id === playerId;
+    if (!isPlayer1 && !isPlayer2) return { success: false, error: 'Not a player in this game' };
 
-    const game: OnlineGameState = JSON.parse(gameData);
+    const yourColor = isPlayer1 ? game.player1Color : game.player2Color;
+    const opponentColor = yourColor === Player.BLUE ? Player.RED : Player.BLUE;
 
-    if (game.gameState !== 'playing') {
-      this.sendError(ws, 'Game is not in playing state');
-      return;
-    }
-
-    const opponentColor = session.playerColor === Player.BLUE ? Player.RED : Player.BLUE;
     game.gameState = 'won';
     game.winner = opponentColor;
     game.winningPath = [];
 
-    await this.env.GAMES_KV.put(
-      `game:${gameId}`,
-      JSON.stringify(game),
-      { expirationTtl: 604800 },
-    );
-
+    await this.persistGame(game);
     this.broadcastState(game);
+
+    return { success: true, data: { gameState: game as unknown as Record<string, unknown> } };
   }
 
-  private getGameId(): string | null {
-    for (const [, attachment] of this.sessions) {
-      return attachment.gameId;
+  // ── State management ─────────────────────────────────────────────────
+
+  private async loadGame(): Promise<OnlineGameState | null> {
+    if (this.cachedGame) {
+      return this.cachedGame;
     }
-    for (const ws of this.ctx.getWebSockets()) {
-      const attachment = ws.deserializeAttachment() as SessionAttachment | null;
-      if (attachment?.gameId) return attachment.gameId;
+    const game = await this.ctx.storage.get<OnlineGameState>('game');
+    if (game) {
+      this.cachedGame = game;
     }
-    return null;
+    return game ?? null;
   }
+
+  private async persistGame(game: OnlineGameState): Promise<void> {
+    this.cachedGame = game;
+    await this.ctx.storage.put('game', game);
+    await this.ctx.storage.setAlarm(Date.now() + GAME_TTL_MS);
+  }
+
+  // ── Messaging ────────────────────────────────────────────────────────
 
   private sendError(ws: WebSocket, message: string) {
     ws.send(JSON.stringify({ type: 'error', message } satisfies ServerMessage));
@@ -253,4 +346,11 @@ export class GameRoom extends DurableObject<Env> {
       }
     });
   }
+}
+
+function jsonResponse(data: unknown, status = 200): Response {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json' },
+  });
 }

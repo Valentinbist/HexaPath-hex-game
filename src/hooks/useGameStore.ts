@@ -133,7 +133,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   giveUp: () => {
-    const { gameMode, gameState, currentPlayer } = get();
+    const { gameMode, gameState, currentPlayer, gameId, playerId } = get();
     if (gameState !== 'playing') return;
 
     const opponent = currentPlayer === Player.BLUE ? Player.RED : Player.BLUE;
@@ -143,7 +143,27 @@ export const useGameStore = create<GameStore>((set, get) => ({
         ws.send(JSON.stringify({ type: 'forfeit' }));
         return;
       }
-      // If WS is down, apply forfeit locally so the player sees the result
+
+      fetch(`/api/games/${gameId}/forfeit`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ playerId }),
+      }).then((r) => r.json()).then((result) => {
+        if (result.success) {
+          const game = result.data.gameState;
+          set({
+            board: game.board,
+            currentPlayer: game.currentPlayer,
+            gameState: game.gameState,
+            winner: game.winner,
+            winningPath: game.winningPath,
+            isYourTurn: false,
+          });
+        }
+      }).catch((error) => {
+        console.error('Failed to forfeit via REST:', error);
+      });
+      return;
     }
 
     set({
