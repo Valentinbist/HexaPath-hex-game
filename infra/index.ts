@@ -12,10 +12,10 @@ const enableZeroTrust = config.getBoolean("enableZeroTrust") ?? false;
 const accessEmails = config.getSecret("accessEmails")?.apply((v) => v.split(",").map((e) => e.trim()));
 const accessEmailDomains = config.getSecret("accessEmailDomains")?.apply((v) => v.split(",").map((d) => d.trim()));
 
-// Worker Custom Domain: routes traffic for the custom domain to the Worker and handles SSL
-let workerDomain: cloudflare.WorkerDomain | undefined;
+// Worker Custom Domain: routes traffic to the Worker, handles DNS + SSL automatically
+let workerDomain: cloudflare.WorkersCustomDomain | undefined;
 if (zoneId && customDomain) {
-  workerDomain = new cloudflare.WorkerDomain("hexapath-domain", {
+  workerDomain = new cloudflare.WorkersCustomDomain("hexapath-domain", {
     accountId,
     hostname: customDomain,
     service: workerName,
