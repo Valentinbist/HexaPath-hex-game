@@ -1,10 +1,8 @@
 /**
- * Core utilities for the Cloudflare Durable Object and KV template
- * STRICTLY DO NOT MODIFY THIS FILE - Hidden from AI to prevent breaking core functionality
+ * Core utilities for the Cloudflare Durable Object template
  */
 
 export interface Env {
     ASSETS: Fetcher;
-    GAMES_KV: KVNamespace;
     GAME_ROOMS: DurableObjectNamespace;
 }

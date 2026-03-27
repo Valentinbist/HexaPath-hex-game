@@ -19,7 +19,7 @@ Each player needs to connect their correspondingly colour side to win.
 -   **Clear State Indication**: Easily see whose turn it is and who the winner is.
 -   **Win Celebration**: The winning path is highlighted with a pulsing glow, followed by a confetti explosion.
 -   **Responsive Design**: Flawless gameplay experience across all device sizes.
--   **Online Multiplayer**: Real-time gameplay via polling (cost-effective for Cloudflare's KV storage)
+-   **Online Multiplayer**: Real-time gameplay via WebSockets backed by Cloudflare Durable Objects
 
 ## Technology Stack
 
@@ -85,15 +85,8 @@ This project is configured for seamless deployment to the Cloudflare network.
    cp wrangler.jsonc.example wrangler.jsonc
    ```
 
-3. **Create a KV Namespace**:
-   ```sh
-   wrangler kv namespace create GAMES_KV
-   ```
-   Copy the namespace ID from the output
-
-4. **Update Configuration**:
+3. **Update Configuration**:
    - Open `wrangler.jsonc`
-   - Replace `YOUR_KV_NAMESPACE_ID_HERE` with your KV namespace ID
    - Update the `name` field if desired (default: "hexapath")
 
 ### Deploy via Wrangler CLI
