@@ -27,7 +27,7 @@ jobs:
       STACK: ${{ inputs.environment == 'prod' && 'hex-prod' || 'hex-dev' }}
       WORKER_NAME: ${{ inputs.environment == 'prod' && 'hexapath' || 'hexapath-dev' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
